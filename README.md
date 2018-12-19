@@ -34,11 +34,9 @@ All dependencies can be installed via:
 pip install -r requirements.txt
 ```
 
-Note that we currently only support PyTorch 0.4.1
+Note that we currently only support PyTorch 1.0.0
 
 ## Features
-
-Key features:
 
 - [data preprocessing](http://opennmt.net/OpenNMT-py/options/preprocess.html)
 - [Inference (translation) with batching and beam search](http://opennmt.net/OpenNMT-py/options/translate.html)
@@ -139,7 +137,7 @@ The original code was written by [Adam Lerer](http://github.com/adamlerer) (NYC)
 
 Major contributors are:
 [Sasha Rush](https://github.com/srush) (Cambridge, MA)
-[Vincent Nguyen]((https://github.com/vince62s) (Ubiqus)
+[Vincent Nguyen](https://github.com/vince62s) (Ubiqus)
 [Ben Peters](http://github.com/bpopeters) (Lisbon)
 [Sebastian Gehrmann](https://github.com/sebastianGehrmann) (Harvard NLP)
 [Yuntian Deng](https://github.com/da03) (Harvard NLP)

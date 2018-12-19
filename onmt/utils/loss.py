@@ -8,12 +8,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import onmt
-import onmt.inputters as inputters
 from onmt.modules.sparse_losses import SparsemaxLoss
 from onmt.modules.sparse_activations import LogSparsemax
 
 
-def build_loss_compute(model, tgt_vocab, opt, train=True):
+def build_loss_compute(model, tgt_field, opt, train=True):
     """
     Returns a LossCompute subclass which wraps around an nn.Module subclass
     (such as nn.NLLLoss) which defines the loss criterion. The LossCompute
@@ -26,6 +25,7 @@ def build_loss_compute(model, tgt_vocab, opt, train=True):
     """
     device = torch.device("cuda" if onmt.utils.misc.use_gpu(opt) else "cpu")
 
+<<<<<<< HEAD
     padding_idx = tgt_vocab.stoi[inputters.PAD_WORD]
     bos_tag_idx = tgt_vocab.stoi[inputters.BOS_TAG]
     end_tag_idx = tgt_vocab.stoi[inputters.EOS_TAG]
@@ -34,10 +34,18 @@ def build_loss_compute(model, tgt_vocab, opt, train=True):
             len(tgt_vocab), opt.copy_attn_force,
             unk_index=inputters.UNK, ignore_index=padding_idx,
             bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
+=======
+    padding_idx = tgt_field.vocab.stoi[tgt_field.pad_token]
+    unk_idx = tgt_field.vocab.stoi[tgt_field.unk_token]
+    if opt.copy_attn:
+        criterion = onmt.modules.CopyGeneratorLoss(
+            len(tgt_field.vocab), opt.copy_attn_force,
+            unk_index=unk_idx, ignore_index=padding_idx
+>>>>>>> 3fffe3c2324c8090f0a6c1edeccbc9b18642e218
         )
     elif opt.label_smoothing > 0 and train:
         criterion = LabelSmoothingLoss(
-            opt.label_smoothing, len(tgt_vocab), ignore_index=padding_idx
+            opt.label_smoothing, len(tgt_field.vocab), ignore_index=padding_idx
         )
     elif isinstance(model.generator[1], LogSparsemax):
         criterion = SparsemaxLoss(ignore_index=padding_idx, reduction='sum')
@@ -52,7 +60,7 @@ def build_loss_compute(model, tgt_vocab, opt, train=True):
     loss_gen = model.generator[0] if use_raw_logits else model.generator
     if opt.copy_attn:
         compute = onmt.modules.CopyGeneratorLossCompute(
-            criterion, loss_gen, tgt_vocab, opt.copy_loss_by_seqlength
+            criterion, loss_gen, tgt_field.vocab, opt.copy_loss_by_seqlength
         )
     else:
         compute = NMTLossCompute(criterion, loss_gen)
