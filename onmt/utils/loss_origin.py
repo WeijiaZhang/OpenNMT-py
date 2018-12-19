@@ -27,13 +27,10 @@ def build_loss_compute(model, tgt_vocab, opt, train=True):
     device = torch.device("cuda" if onmt.utils.misc.use_gpu(opt) else "cpu")
 
     padding_idx = tgt_vocab.stoi[inputters.PAD_WORD]
-    bos_tag_idx = tgt_vocab.stoi[inputters.BOS_TAG]
-    end_tag_idx = tgt_vocab.stoi[inputters.EOS_TAG]
     if opt.copy_attn:
         criterion = onmt.modules.CopyGeneratorLoss(
             len(tgt_vocab), opt.copy_attn_force,
-            unk_index=inputters.UNK, ignore_index=padding_idx,
-            bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
+            unk_index=inputters.UNK, ignore_index=padding_idx
         )
     elif opt.label_smoothing > 0 and train:
         criterion = LabelSmoothingLoss(
@@ -204,7 +201,6 @@ class LabelSmoothingLoss(nn.Module):
     KL-divergence between q_{smoothed ground truth prob.}(w)
     and p_{prob. computed by model}(w) is minimized.
     """
-
     def __init__(self, label_smoothing, tgt_vocab_size, ignore_index=-100):
         assert 0.0 < label_smoothing <= 1.0
         self.ignore_index = ignore_index

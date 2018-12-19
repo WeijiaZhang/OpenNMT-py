@@ -78,6 +78,9 @@ class CopyGenerator(nn.Module):
              A sparse indicator matrix mapping each source word to
              its index in the "extended" vocab containing.
              `[src_len, batch, extra_words]`
+        Return:
+            out_prob (`FloatTensor`): output probability `[batch*tlen, input_size]`
+            copy_prob (`FloatTensor`): copy probability `[batch*tlen, input_size]`
         """
         # CHECKS
         batch_by_tlen, _ = hidden.size()
@@ -108,13 +111,15 @@ class CopyGeneratorLoss(nn.Module):
     """ Copy generator criterion """
 
     def __init__(self, vocab_size, force_copy, unk_index=0,
-                 ignore_index=-100, eps=1e-20):
+                 ignore_index=-100, eps=1e-20, bos_tag_idx=-101, end_tag_idx=-102):
         super(CopyGeneratorLoss, self).__init__()
         self.force_copy = force_copy
         self.eps = eps
         self.vocab_size = vocab_size
         self.ignore_index = ignore_index
         self.unk_index = unk_index
+        self.bos_tag_idx = bos_tag_idx
+        self.end_tag_idx = end_tag_idx
 
     def forward(self, scores, align, target):
         """
@@ -157,6 +162,39 @@ class CopyGeneratorLossCompute(LossComputeBase):
         self.tgt_vocab = tgt_vocab
         self.normalize_by_length = normalize_by_length
 
+    @property
+    def bos_tag_idx(self):
+        return self.criterion.bos_tag_idx
+
+    @property
+    def end_tag_idx(self):
+        return self.criterion.end_tag_idx
+
+    def _stats(self, loss, scores, target):
+        """
+        Args:
+            loss (:obj:`FloatTensor`): the loss computed by the loss criterion.
+            scores (:obj:`FloatTensor`): a score for each possible output
+            target (:obj:`FloatTensor`): true targets
+
+        Returns:
+            :obj:`onmt.utils.Statistics` : statistics for this batch.
+        """
+        batch_size = scores.size(1)
+        score = self._bottle(scores)
+        pred = scores.max(1)[1]
+        non_padding = target.ne(self.padding_idx)
+        num_correct = pred.eq(target).masked_select(non_padding).sum().item()
+        num_non_padding = non_padding.sum().item()
+
+        pred_arr = pred.view(-1, batch_size).contiguous().transpose(0, 1)
+        target_arr = target.view(-1, batch_size).contiguous().transpose(0, 1)
+        pred_arr = pred_arr.cpu().numpy()
+        target_arr = target_arr.cpu().numpy()
+        stats = onmt.utils.Statistics(loss.item(), num_non_padding, num_correct, pred_arr, target_arr,
+                                      self.padding, self.bos_tag_idx, self.end_tag_idx)
+        return stats
+
     def _make_shard_state(self, batch, output, range_, attns):
         """ See base class for args description. """
         if getattr(batch, "alignment", None) is None:
@@ -192,7 +230,7 @@ class CopyGeneratorLossCompute(LossComputeBase):
         scores_data = inputters.TextDataset.collapse_copy_scores(
             self._unbottle(scores.clone(), batch.batch_size),
             batch, self.tgt_vocab, batch.dataset.src_vocabs)
-        scores_data = self._bottle(scores_data)
+        # scores_data = self._bottle(scores_data)
 
         # this block does not depend on the loss value computed above
         # and is used only for stats

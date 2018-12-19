@@ -12,6 +12,9 @@ UNK_WORD = '<unk>'
 UNK = 0
 BOS_WORD = '<s>'
 EOS_WORD = '</s>'
+# addtional tags for segmenting each sentence
+BOS_TAG = '<t>'
+EOS_TAG = '</t>'
 
 
 class DatasetBase(torchtext.data.Dataset):
@@ -61,7 +64,8 @@ class DatasetBase(torchtext.data.Dataset):
         if not tokens:
             return [], [], -1
 
-        specials = [PAD_WORD, UNK_WORD, BOS_WORD, EOS_WORD]
+        # specials = [PAD_WORD, UNK_WORD, BOS_WORD, EOS_WORD]
+        specials = [PAD_WORD, BOS_WORD, EOS_WORD]
         words = []
         features = []
         n_feats = None

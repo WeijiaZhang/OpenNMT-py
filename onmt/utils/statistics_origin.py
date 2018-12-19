@@ -3,65 +3,10 @@ from __future__ import division
 import time
 import math
 import sys
-import re
 
 from torch.distributed import get_rank
 from onmt.utils.distributed import all_gather_list
 from onmt.utils.logging import logger
-from onmt.utils.g_rouge import rouge
-
-
-class RougeCompute(object):
-    """
-    Calculating google rouge evaluation for text sunmmarization
-    """
-
-    def __init__(self, preds, target, padding_idx, bos_tag_idx, end_tag_idx):
-        self.preds = preds
-        self.target = target
-        self.padding_idx = padding_idx
-        self.bos_tag_idx = bos_tag_idx
-        self.end_tag_idx = end_tag_idx
-
-    def split_sentences(self, arr):
-        """
-        spliting sentences using given sentence tags
-        ignore padding_idx
-        """
-        sentences = []
-        bos_flag = False
-        sent = None
-
-        last_idx =
-        for ele in arr:
-            if ele == self.bos_tag_idx:
-                bos_flag = True
-                sent = []
-            elif ele == self.end_tag_idx:
-                bos_flag = False
-                if len(sent) > 1:
-                    sent = " ".join(sent)
-                    sentences.append(sent)
-            elif bos_flag:
-                sent.append(str(ele))
-
-        return sentences
-
-    def generate_data(self):
-        """
-        generating data format for google rouge evaluation
-        """
-        summaries = []
-        references = []
-        for pred_ele, tgt_ele in zip(preds, target):
-            summary = self.split_sentences(pred_ele)
-            reference = self.split_sentences(tgt_ele)
-            if len(summary) > 0 and len(reference) > 0:
-                summaries.append()
-        return
-
-    def cal_rouge(self):
-        pass
 
 
 class Statistics(object):
@@ -74,17 +19,11 @@ class Statistics(object):
     * elapsed time
     """
 
-    def __init__(self, loss=0, n_words=0, n_correct=0,
-                 preds=None, target=None, padding_idx=0, bos_tag_idx=0, end_tag_idx=0):
+    def __init__(self, loss=0, n_words=0, n_correct=0):
         self.loss = loss
         self.n_words = n_words
         self.n_correct = n_correct
         self.n_src_words = 0
-        self.preds = preds
-        self.target = target
-        self.padding_idx = padding_idx
-        self.bos_tag_idx = bos_tag_idx
-        self.end_tag_idx = end_tag_idx
         self.start_time = time.time()
 
     @staticmethod
