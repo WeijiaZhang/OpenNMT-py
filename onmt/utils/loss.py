@@ -25,23 +25,15 @@ def build_loss_compute(model, tgt_field, opt, train=True):
     """
     device = torch.device("cuda" if onmt.utils.misc.use_gpu(opt) else "cpu")
 
-<<<<<<< HEAD
-    padding_idx = tgt_vocab.stoi[inputters.PAD_WORD]
-    bos_tag_idx = tgt_vocab.stoi[inputters.BOS_TAG]
-    end_tag_idx = tgt_vocab.stoi[inputters.EOS_TAG]
-    if opt.copy_attn:
-        criterion = onmt.modules.CopyGeneratorLoss(
-            len(tgt_vocab), opt.copy_attn_force,
-            unk_index=inputters.UNK, ignore_index=padding_idx,
-            bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
-=======
     padding_idx = tgt_field.vocab.stoi[tgt_field.pad_token]
     unk_idx = tgt_field.vocab.stoi[tgt_field.unk_token]
+    bos_tag_idx = tgt_field.vocab.stoi[inputters.BOS_TAG]
+    end_tag_idx = tgt_field.vocab..stoi[inputters.EOS_TAG]
     if opt.copy_attn:
         criterion = onmt.modules.CopyGeneratorLoss(
             len(tgt_field.vocab), opt.copy_attn_force,
-            unk_index=unk_idx, ignore_index=padding_idx
->>>>>>> 3fffe3c2324c8090f0a6c1edeccbc9b18642e218
+            unk_index=unk_idx, ignore_index=padding_idx,
+            bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
         )
     elif opt.label_smoothing > 0 and train:
         criterion = LabelSmoothingLoss(

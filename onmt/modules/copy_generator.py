@@ -4,6 +4,7 @@ import torch.nn as nn
 import onmt.inputters as inputters
 from onmt.utils.misc import aeq
 from onmt.utils.loss import LossComputeBase
+from onmt.utils.statistics import RougeCompute, Statistics
 
 
 class CopyGenerator(nn.Module):
@@ -162,6 +163,13 @@ class CopyGeneratorLossCompute(LossComputeBase):
     def end_tag_idx(self):
         return self.criterion.end_tag_idx
 
+    def _cal_rouge(self, pred_arr, target_arr):
+        rouge_obj = RougeCompute(
+            self.padding_idx, self.bos_tag_idx, self.end_tag_idx)
+        summaries, references = rouge_obj.generate_data(pred_arr, target_arr)
+        g_scores = rouge_obj.cal_rouge(summaries, references)
+        return g_scores
+
     def _stats(self, loss, scores, target):
         """
         Args:
@@ -179,12 +187,14 @@ class CopyGeneratorLossCompute(LossComputeBase):
         num_correct = pred.eq(target).masked_select(non_padding).sum().item()
         num_non_padding = non_padding.sum().item()
 
+        # calculating rouge
         pred_arr = pred.view(-1, batch_size).contiguous().transpose(0, 1)
         target_arr = target.view(-1, batch_size).contiguous().transpose(0, 1)
         pred_arr = pred_arr.cpu().numpy()
         target_arr = target_arr.cpu().numpy()
-        stats = onmt.utils.Statistics(loss.item(), num_non_padding, num_correct, pred_arr, target_arr,
-                                      self.padding, self.bos_tag_idx, self.end_tag_idx)
+        g_scores = self._cal_rouge(pred_arr, target_arr)
+
+        stats = Statistics(loss.item(), num_non_padding, num_correct, g_scores)
         return stats
 
     def _make_shard_state(self, batch, output, range_, attns):

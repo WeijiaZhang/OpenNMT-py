@@ -16,12 +16,17 @@ class RougeCompute(object):
     Calculating google rouge evaluation for text sunmmarization
     """
 
-    def __init__(self, preds, target, padding_idx, bos_tag_idx, end_tag_idx):
-        self.preds = preds
-        self.target = target
+    def __init__(self, padding_idx, bos_tag_idx, end_tag_idx):
         self.padding_idx = padding_idx
         self.bos_tag_idx = bos_tag_idx
         self.end_tag_idx = end_tag_idx
+
+    @staticmethod
+    def get_rouge_keys():
+        keys = ['rouge_1/r_score', 'rouge_1/p_score', 'rouge_1/f_score',
+                'rouge_2/r_score', 'rouge_2/p_score', 'rouge_2/f_score',
+                'rouge_l/r_score', 'rouge_l/p_score', 'rouge_l/f_score']
+        return keys
 
     def split_sentences(self, arr):
         """
@@ -30,24 +35,24 @@ class RougeCompute(object):
         """
         sentences = []
         bos_flag = False
-        sent = None
-
-        last_idx =
+        sent = []
         for ele in arr:
-            if ele == self.bos_tag_idx:
+            if ele == self.padding_idx:
+                continue
+            elif ele == self.bos_tag_idx:
                 bos_flag = True
-                sent = []
             elif ele == self.end_tag_idx:
-                bos_flag = False
                 if len(sent) > 1:
                     sent = " ".join(sent)
                     sentences.append(sent)
+                bos_flag = False
+                sent = []
             elif bos_flag:
                 sent.append(str(ele))
 
         return sentences
 
-    def generate_data(self):
+    def generate_data(self, preds, target):
         """
         generating data format for google rouge evaluation
         """
@@ -57,11 +62,13 @@ class RougeCompute(object):
             summary = self.split_sentences(pred_ele)
             reference = self.split_sentences(tgt_ele)
             if len(summary) > 0 and len(reference) > 0:
-                summaries.append()
-        return
+                summaries.append(summary)
+                references.append(reference)
+        return summaries, references
 
-    def cal_rouge(self):
-        pass
+    def cal_rouge(self, summaries, references):
+        g_scores = rouge(summaries, references)
+        return g_scores
 
 
 class Statistics(object):
@@ -74,17 +81,17 @@ class Statistics(object):
     * elapsed time
     """
 
-    def __init__(self, loss=0, n_words=0, n_correct=0,
-                 preds=None, target=None, padding_idx=0, bos_tag_idx=0, end_tag_idx=0):
+    def __init__(self, loss=0, n_words=0, n_correct=0, rouge_scores=None):
         self.loss = loss
         self.n_words = n_words
         self.n_correct = n_correct
         self.n_src_words = 0
-        self.preds = preds
-        self.target = target
-        self.padding_idx = padding_idx
-        self.bos_tag_idx = bos_tag_idx
-        self.end_tag_idx = end_tag_idx
+        self.rouge_keys = RougeCompute.get_rouge_keys()
+        if rouge_scores is None:
+            self.rouge_scores = dict()
+            for key in self.rouge_keys:
+                self.rouge_scores[key] = 0.0
+
         self.start_time = time.time()
 
     @staticmethod
@@ -128,7 +135,7 @@ class Statistics(object):
                 our_stats[i].update(stat, update_n_src_words=True)
         return our_stats
 
-    def update(self, stat, update_n_src_words=False):
+    def update(self, stat, update_n_src_words=False, update_rouge=False):
         """
         Update statistics by suming values with another `Statistics` object
 
@@ -144,6 +151,17 @@ class Statistics(object):
 
         if update_n_src_words:
             self.n_src_words += stat.n_src_words
+        if update_rouge:
+            for key in self.rouge_keys:
+
+    def rouge_n_r_score(self, n='1'):
+        return 100 * self.rouge_scores['rouge_%s/r_score' % n]
+
+    def rouge_n_p_score(self, n='1'):
+        return 100 * self.rouge_scores['rouge_%s/p_score' % n]
+
+    def rouge_n_f_score(self, n='1'):
+        return 100 * self.rouge_scores['rouge_%s/f_score' % n]
 
     def accuracy(self):
         """ compute accuracy """
