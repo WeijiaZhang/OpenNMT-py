@@ -188,8 +188,19 @@ class Statistics(object):
            start (int): start time of step.
         """
         t = self.elapsed_time()
+        # logger.info(
+        #     ("Step %2d/%5d; acc: %6.2f; ppl: %5.2f; xent: %4.2f; " +
+        #      "lr: %7.5f; %3.0f/%3.0f tok/s; %6.0f sec")
+        #     % (step, num_steps,
+        #        self.accuracy(),
+        #        self.ppl(),
+        #        self.xent(),
+        #        learning_rate,
+        #        self.n_src_words / (t + 1e-5),
+        #        self.n_words / (t + 1e-5),
+        #        time.time() - start))
         logger.info(
-            ("Step %2d/%5d; acc: %6.2f; ppl: %5.2f; xent: %4.2f; " +
+            ("Step %2d/%5d; rouge_1_f: %6.2f; rouge_2_f: %5.2f; rouge_: %4.2f; " +
              "lr: %7.5f; %3.0f/%3.0f tok/s; %6.0f sec")
             % (step, num_steps,
                self.accuracy(),
