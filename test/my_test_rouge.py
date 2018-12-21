@@ -9,6 +9,7 @@ import sys
 import codecs
 
 from g_rouge import rouge
+import rouge_score
 lib_path = os.path.abspath(os.path.join('..'))
 sys.path.append(lib_path)
 from onmt.utils.logging import init_logger, logger
@@ -243,27 +244,18 @@ def print_rouge_results(results_dict):
     return res
 
 
-def print_goolge_rouge(summaries, references):
-    n_target = len(references)
-    t0 = time.time()
-    g_scores = rouge(summaries, [candidates[0] for candidates in references])
-    dt = time.time() - t0
-
+def print_rouge_scores(scores):
     # g_headers = ['rouge_1/r_score', 'rouge_1/p_score', 'rouge_1/f_score', 'rouge_2/r_score',
     #              'rouge_2/p_score', 'rouge_2/f_score', 'rouge_l/r_score', 'rouge_l/p_score', 'rouge_l/f_score']
-
     # print(g_headers)
     for idx in ['1', '2', 'l']:
         head_prefix = "ROUGE-%s" % idx
         val_prefix = "rouge_%s" % idx
         res = ">> {}-R: {:.2f}, {}-P: {:.2f}, {}-F: {:.2f}".format(
-            head_prefix, g_scores["%s/r_score" % val_prefix] * 100,
-            head_prefix, g_scores["%s/p_score" % val_prefix] * 100,
-            head_prefix, g_scores["%s/f_score" % val_prefix] * 100)
+            head_prefix, scores["%s/r_score" % val_prefix] * 100,
+            head_prefix, scores["%s/p_score" % val_prefix] * 100,
+            head_prefix, scores["%s/f_score" % val_prefix] * 100)
         logger.info(res)
-
-    logger.info('>> evaluated {} samples, took {:.3f}s, averaging {:.3f}s/sample'.format(
-        n_target, dt, dt / (n_target + 1e-8)))
 
 
 def main():
@@ -283,6 +275,8 @@ def main():
                         help='The number of bootstrap samples used in ROUGE.')
     parser.add_argument('-g', '--google', dest='run_google_rouge', action='store_true',
                         help='Evaluate with the ROUGE implementation from google/seq2seq.')
+    parser.add_argument('-p', '--pltrdy', dest='run_pltrdy_rouge', action='store_true',
+                        help='Evaluate with the ROUGE implementation from git:pltrdy/rouge')
     args = parser.parse_args()
 
     process_src = baseline_registry[args.method_src]
@@ -319,22 +313,30 @@ def main():
         # add the stemming flag
         rouge_args += ['-m']
 
-    if args.run_google_rouge:
-        print_goolge_rouge(summaries, references)
+    t0 = time.time()
+    if args.run_pltrdy_rouge:
+        logger.info(">> Performing pltrdy rouge")
+        p_scores = rouge_score.cal_rouge(summaries, [candidates[0]
+                                                     for candidates in references])
+        print_rouge_scores(p_scores)
+    elif args.run_google_rouge:
+        logger.info(">> Performing google rouge")
+        g_scores = rouge(summaries, [candidates[0]
+                                     for candidates in references])
+        print_rouge_scores(g_scores)
     else:
-        t0 = time.time()
         # evaluate with official ROUGE script v1.5.5
         # results_dict = test_rouge(summaries, references, rouge_args=rouge_args)
         results_dict = eval_rouge_by_sentence(
             summaries, references, rouge_args=rouge_args)
 
-        dt = time.time() - t0
-
         logger.info('>> method_src: %s, method_tgt: %s' %
                     (args.method_src, args.method_tgt))
         print_rouge_results(results_dict)
-        logger.info('>> evaluated {} samples, took {:.3f}s, averaging {:.3f}s/sample'.format(
-            n_target, dt, dt / (n_target + 1e-3)))
+
+    dt = time.time() - t0
+    logger.info('>> evaluated {} samples, took {:.3f}s, averaging {:.3f}s/sample'.format(
+        n_target, dt, dt / (n_target + 1e-3)))
 
 
 if __name__ == "__main__":

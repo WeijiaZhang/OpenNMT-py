@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import onmt
+import onmt.inputters as inputters
 from onmt.modules.sparse_losses import SparsemaxLoss
 from onmt.modules.sparse_activations import LogSparsemax
 
@@ -28,7 +29,7 @@ def build_loss_compute(model, tgt_field, opt, train=True):
     padding_idx = tgt_field.vocab.stoi[tgt_field.pad_token]
     unk_idx = tgt_field.vocab.stoi[tgt_field.unk_token]
     bos_tag_idx = tgt_field.vocab.stoi[inputters.BOS_TAG]
-    end_tag_idx = tgt_field.vocab..stoi[inputters.EOS_TAG]
+    end_tag_idx = tgt_field.vocab.stoi[inputters.EOS_TAG]
     if opt.copy_attn:
         criterion = onmt.modules.CopyGeneratorLoss(
             len(tgt_field.vocab), opt.copy_attn_force,

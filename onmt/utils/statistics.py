@@ -8,7 +8,7 @@ import re
 from torch.distributed import get_rank
 from onmt.utils.distributed import all_gather_list
 from onmt.utils.logging import logger
-from onmt.utils.g_rouge import rouge
+from onmt.utils import rouge_score
 
 
 class RougeCompute(object):
@@ -28,6 +28,14 @@ class RougeCompute(object):
                 'rouge_l/r_score', 'rouge_l/p_score', 'rouge_l/f_score']
         return keys
 
+    @staticmethod
+    def init_rouge_scores():
+        rouge_keys = RougeCompute.get_rouge_keys()
+        rouge_scores = dict()
+        for key in rouge_keys:
+            rouge_scores[key] = 0.0
+        return rouge_scores
+
     def split_sentences(self, arr):
         """
         spliting sentences using given sentence tags
@@ -36,19 +44,41 @@ class RougeCompute(object):
         sentences = []
         bos_flag = False
         sent = []
+        # counting element that has visited in for loop
+        i = 0
         for ele in arr:
             if ele == self.padding_idx:
+                i += 1
                 continue
             elif ele == self.bos_tag_idx:
+                i += 1
                 bos_flag = True
             elif ele == self.end_tag_idx:
+                i += 1
                 if len(sent) > 1:
                     sent = " ".join(sent)
                     sentences.append(sent)
                 bos_flag = False
                 sent = []
             elif bos_flag:
+                i += 1
                 sent.append(str(ele))
+
+        # last sentence without end tag
+        if len(sent) > 1:
+            sent = " ".join(sent)
+            sentences.append(sent)
+
+        # obtaining tokens that have no right format
+        if i < len(arr):
+            sent = []
+            for ele in arr[i:]:
+                if ele not in [self.padding_idx, self.bos_tag_idx, self.end_tag_idx]:
+                    sent.append(str(ele))
+
+            if len(sent) > 1:
+                sent = " ".join(sent)
+                sentences.append(sent)
 
         return sentences
 
@@ -67,8 +97,11 @@ class RougeCompute(object):
         return summaries, references
 
     def cal_rouge(self, summaries, references):
-        g_scores = rouge(summaries, references)
-        return g_scores
+        if len(summaries) > 0 and len(references) > 0:
+            r_scores = rouge_score.cal_rouge(summaries, references)
+        else:
+            r_scores = None
+        return r_scores
 
 
 class Statistics(object):
@@ -88,9 +121,11 @@ class Statistics(object):
         self.n_src_words = 0
         self.rouge_keys = RougeCompute.get_rouge_keys()
         if rouge_scores is None:
-            self.rouge_scores = dict()
-            for key in self.rouge_keys:
-                self.rouge_scores[key] = 0.0
+            self.num_rouge = 0
+            self.rouge_scores = RougeCompute.init_rouge_scores()
+        else:
+            self.num_rouge = 1
+            self.rouge_scores = rouge_scores
 
         self.start_time = time.time()
 
@@ -135,7 +170,7 @@ class Statistics(object):
                 our_stats[i].update(stat, update_n_src_words=True)
         return our_stats
 
-    def update(self, stat, update_n_src_words=False, update_rouge=False):
+    def update(self, stat, update_n_src_words=False, update_rouge=True):
         """
         Update statistics by suming values with another `Statistics` object
 
@@ -152,16 +187,24 @@ class Statistics(object):
         if update_n_src_words:
             self.n_src_words += stat.n_src_words
         if update_rouge:
+            self.num_rouge += stat.num_rouge
             for key in self.rouge_keys:
+                self.rouge_scores[key] += stat.rouge_scores[key]
 
-    def rouge_n_r_score(self, n='1'):
-        return 100 * self.rouge_scores['rouge_%s/r_score' % n]
+    def rouge_n_r_score(self, n):
+        r_score = self.rouge_scores['rouge_%s/r_score' %
+                                    n] / (self.num_rouge + 1e-8)
+        return 100 * r_score
 
-    def rouge_n_p_score(self, n='1'):
-        return 100 * self.rouge_scores['rouge_%s/p_score' % n]
+    def rouge_n_p_score(self, n):
+        p_score = self.rouge_scores['rouge_%s/p_score' %
+                                    n] / (self.num_rouge + 1e-8)
+        return 100 * p_score
 
-    def rouge_n_f_score(self, n='1'):
-        return 100 * self.rouge_scores['rouge_%s/f_score' % n]
+    def rouge_n_f_score(self, n):
+        f_score = self.rouge_scores['rouge_%s/f_score' %
+                                    n] / (self.num_rouge + 1e-8)
+        return 100 * f_score
 
     def accuracy(self):
         """ compute accuracy """
@@ -200,12 +243,12 @@ class Statistics(object):
         #        self.n_words / (t + 1e-5),
         #        time.time() - start))
         logger.info(
-            ("Step %2d/%5d; rouge_1_f: %6.2f; rouge_2_f: %5.2f; rouge_: %4.2f; " +
-             "lr: %7.5f; %3.0f/%3.0f tok/s; %6.0f sec")
+            ("Step %2d/%5d; ROUGE-1-F: %.2f; ROUGE-2-F: %.2f; ROUGE-L-F: %.2f; " +
+             "lr: %.4f; %3.0f/%3.0f tok/s; %4.0f sec")
             % (step, num_steps,
-               self.accuracy(),
-               self.ppl(),
-               self.xent(),
+               self.rouge_n_f_score('1'),
+               self.rouge_n_f_score('2'),
+               self.rouge_n_f_score('l'),
                learning_rate,
                self.n_src_words / (t + 1e-5),
                self.n_words / (t + 1e-5),
@@ -220,3 +263,10 @@ class Statistics(object):
         writer.add_scalar(prefix + "/accuracy", self.accuracy(), step)
         writer.add_scalar(prefix + "/tgtper", self.n_words / t, step)
         writer.add_scalar(prefix + "/lr", learning_rate, step)
+        for n in ['1', '2', 'l']:
+            writer.add_scalar(prefix + "/rouge_%s_r_score" % n,
+                              self.rouge_n_r_score(n), step)
+            writer.add_scalar(prefix + "/rouge_%s_p_score" % n,
+                              self.rouge_n_p_score(n), step)
+            writer.add_scalar(prefix + "/rouge_%s_f_score" % n,
+                              self.rouge_n_f_score(n), step)

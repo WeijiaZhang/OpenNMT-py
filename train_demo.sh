@@ -9,7 +9,7 @@ GIGA_MODEL_PATH=../opennmt_saved_models/giga
 
 function train_cnndm() {
         gpu_idx=$1
-        CUDA_VISIBLE_DEVICES=${gpu_idx} nohup python train.py -data ${CNNDM_DATA_PREFIX} \
+        CUDA_VISIBLE_DEVICES=${gpu_idx} python train.py -data ${CNNDM_DATA_PREFIX} \
                 -save_model ${CNNDM_MODEL_PREFIX} \
                 -copy_attn \
                 -global_attention mlp \
@@ -19,12 +19,12 @@ function train_cnndm() {
                 -encoder_type brnn \
                 -max_grad_norm 2 \
                 -dropout 0. \
-                -batch_size 16 \
-                -valid_batch_size 16 \
+                -batch_size 4 \
+                -valid_batch_size 4 \
                 -train_steps 200000 \
-                -valid_steps 10000 \
+                -valid_steps 200 \
                 -save_checkpoint_steps 10000 \
-                -keep_checkpoint 7 \
+                -keep_checkpoint 10 \
                 -optim adagrad \
                 -learning_rate 0.15 \
                 -adagrad_accumulator_init 0.1 \
@@ -33,8 +33,8 @@ function train_cnndm() {
                 -bridge \
                 -seed 777 \
                 -world_size 1 \
-                -gpu_ranks 0 \
-                > logs/train_cnndm_demo.log &   
+                -gpu_ranks 0
+                # > logs/train_cnndm_demo.log &   
 }
 
 function train_cnndm_trans() {
