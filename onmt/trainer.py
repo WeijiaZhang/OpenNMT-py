@@ -272,7 +272,7 @@ class Trainer(object):
 
             tgt_outer = inputters.make_features(batch, 'tgt')
 
-            for j in range(0, target_size-1, trunc_size):
+            for j in range(0, target_size - 1, trunc_size):
                 # 1. Create truncated target.
                 tgt = tgt_outer[j: j + trunc_size]
 

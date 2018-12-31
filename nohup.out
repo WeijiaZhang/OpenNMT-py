@@ -1,0 +1,21 @@
+[2018-12-22 11:55:27,091 INFO] Loading checkpoint from ../opennmt_saved_models/cnndm_transformer_step_40000.pt
+Traceback (most recent call last):
+  File "train.py", line 120, in <module>
+    main(opt)
+  File "train.py", line 53, in main
+    single_main(opt, -1)
+  File "/home/zhangwj/code/nlp/opennmt_summary/onmt/train_single.py", line 112, in main
+    first_dataset = next(lazily_load_dataset("train", opt))
+  File "/home/zhangwj/code/nlp/opennmt_summary/onmt/inputters/inputter.py", line 565, in lazily_load_dataset
+    yield _lazy_dataset_loader(pt, corpus_type)
+  File "/home/zhangwj/code/nlp/opennmt_summary/onmt/inputters/inputter.py", line 556, in _lazy_dataset_loader
+    dataset = torch.load(pt_file)
+  File "/home/zhangwj/virtual_env/anaconda3/envs/py36/lib/python3.6/site-packages/torch/serialization.py", line 358, in load
+    return _load(f, map_location, pickle_module)
+  File "/home/zhangwj/virtual_env/anaconda3/envs/py36/lib/python3.6/site-packages/torch/serialization.py", line 542, in _load
+    result = unpickler.load()
+  File "/home/zhangwj/virtual_env/anaconda3/envs/py36/lib/python3.6/collections/__init__.py", line 535, in __init__
+    self.update(*args, **kwds)
+  File "/home/zhangwj/virtual_env/anaconda3/envs/py36/lib/python3.6/collections/__init__.py", line 609, in update
+    self, *args = args
+KeyboardInterrupt

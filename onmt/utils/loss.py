@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import onmt
+import onmt.inputters as inputters
 from onmt.modules.sparse_losses import SparsemaxLoss
 from onmt.modules.sparse_activations import LogSparsemax
 
@@ -27,14 +28,24 @@ def build_loss_compute(model, tgt_field, opt, train=True):
 
     padding_idx = tgt_field.vocab.stoi[tgt_field.pad_token]
     unk_idx = tgt_field.vocab.stoi[tgt_field.unk_token]
-    bos_tag_idx = tgt_field.vocab.stoi[inputters.BOS_TAG]
-    end_tag_idx = tgt_field.vocab..stoi[inputters.EOS_TAG]
+    end_token_idx = tgt_field.vocab.stoi[tgt_field.eos_token]
+
     if opt.copy_attn:
-        criterion = onmt.modules.CopyGeneratorLoss(
-            len(tgt_field.vocab), opt.copy_attn_force,
-            unk_index=unk_idx, ignore_index=padding_idx,
-            bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
-        )
+        if opt.with_tag:
+            bos_tag_idx = tgt_field.vocab.stoi[inputters.BOS_TAG]
+            end_tag_idx = tgt_field.vocab.stoi[inputters.EOS_TAG]
+            criterion = onmt.modules.CopyGeneratorLoss(
+                len(tgt_field.vocab), opt.copy_attn_force,
+                unk_index=unk_idx, ignore_index=padding_idx, end_token_idx=end_token_idx,
+                with_tag=opt.with_tag, bos_tag_idx=bos_tag_idx, end_tag_idx=end_tag_idx
+            )
+        else:
+            end_sent_idx = tgt_field.vocab.stoi[inputters.EOS_SENT]
+            criterion = onmt.modules.CopyGeneratorLoss(
+                len(tgt_field.vocab), opt.copy_attn_force,
+                unk_index=unk_idx, ignore_index=padding_idx, end_token_idx=end_token_idx,
+                with_tag=opt.with_tag, end_sent_idx=end_sent_idx
+            )
     elif opt.label_smoothing > 0 and train:
         criterion = LabelSmoothingLoss(
             opt.label_smoothing, len(tgt_field.vocab), ignore_index=padding_idx

@@ -282,6 +282,8 @@ def train_opts(parser):
     group.add('--data', '-data', required=True,
               help="""Path prefix to the ".train.pt" and
                        ".valid.pt" file path from preprocess.py""")
+    group.add('--with_tag', '-with_tag', action='store_true',
+              help="Denote whether data contain sentence tag or not")
 
     group.add('--save_model', '-save_model', default='model',
               help="""Model filename (the model will be saved as

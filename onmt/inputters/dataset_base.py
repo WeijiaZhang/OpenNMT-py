@@ -14,6 +14,7 @@ EOS_WORD = '</s>'
 # addtional tags for segmenting each sentence
 BOS_TAG = '<t>'
 EOS_TAG = '</t>'
+EOS_SENT = '.'
 
 
 class DatasetBase(torchtext.data.Dataset):

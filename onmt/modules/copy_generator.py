@@ -104,15 +104,20 @@ class CopyGeneratorLoss(nn.Module):
     """ Copy generator criterion """
 
     def __init__(self, vocab_size, force_copy, unk_index=0,
-                 ignore_index=-100, eps=1e-20, bos_tag_idx=-101, end_tag_idx=-102):
+                 ignore_index=-100, eps=1e-20, end_token_idx=-100,
+                 with_tag=False, bos_tag_idx=-100, end_tag_idx=-100, end_sent_idx=-100):
         super(CopyGeneratorLoss, self).__init__()
         self.force_copy = force_copy
         self.eps = eps
         self.vocab_size = vocab_size
         self.ignore_index = ignore_index
         self.unk_index = unk_index
+        self.end_token_idx = end_token_idx
+
+        self.with_tag = with_tag
         self.bos_tag_idx = bos_tag_idx
         self.end_tag_idx = end_tag_idx
+        self.end_sent_idx = end_sent_idx
 
     def forward(self, scores, align, target):
         """
@@ -154,6 +159,23 @@ class CopyGeneratorLossCompute(LossComputeBase):
         super(CopyGeneratorLossCompute, self).__init__(criterion, generator)
         self.tgt_vocab = tgt_vocab
         self.normalize_by_length = normalize_by_length
+        self.rouge_obj = RougeCompute(
+            self.padding_idx, self.end_token_idx,
+            with_tag=self.with_tag, end_sent_idx=self.end_sent_idx,
+            bos_tag_idx=self.bos_tag_idx, end_tag_idx=self.end_tag_idx
+        )
+
+    @property
+    def with_tag(self):
+        return self.criterion.with_tag
+
+    @property
+    def end_sent_idx(self):
+        return self.criterion.end_sent_idx
+
+    @property
+    def end_token_idx(self):
+        return self.criterion.end_token_idx
 
     @property
     def bos_tag_idx(self):
@@ -164,11 +186,12 @@ class CopyGeneratorLossCompute(LossComputeBase):
         return self.criterion.end_tag_idx
 
     def _cal_rouge(self, pred_arr, target_arr):
-        rouge_obj = RougeCompute(
-            self.padding_idx, self.bos_tag_idx, self.end_tag_idx)
-        summaries, references = rouge_obj.generate_data(pred_arr, target_arr)
-        g_scores = rouge_obj.cal_rouge(summaries, references)
-        return g_scores
+        summaries, references = self.rouge_obj.generate_data(
+            pred_arr, target_arr)
+        # import pdb
+        # pdb.set_trace()
+        r_scores = self.rouge_obj.cal_rouge(summaries, references)
+        return r_scores
 
     def _stats(self, loss, scores, target):
         """
@@ -181,7 +204,7 @@ class CopyGeneratorLossCompute(LossComputeBase):
             :obj:`onmt.utils.Statistics` : statistics for this batch.
         """
         batch_size = scores.size(1)
-        score = self._bottle(scores)
+        scores = self._bottle(scores)
         pred = scores.max(1)[1]
         non_padding = target.ne(self.padding_idx)
         num_correct = pred.eq(target).masked_select(non_padding).sum().item()
@@ -192,9 +215,9 @@ class CopyGeneratorLossCompute(LossComputeBase):
         target_arr = target.view(-1, batch_size).contiguous().transpose(0, 1)
         pred_arr = pred_arr.cpu().numpy()
         target_arr = target_arr.cpu().numpy()
-        g_scores = self._cal_rouge(pred_arr, target_arr)
+        r_scores = self._cal_rouge(pred_arr, target_arr)
 
-        stats = Statistics(loss.item(), num_non_padding, num_correct, g_scores)
+        stats = Statistics(loss.item(), num_non_padding, num_correct, r_scores)
         return stats
 
     def _make_shard_state(self, batch, output, range_, attns):

@@ -7,7 +7,7 @@ from onmt.inputters.inputter import make_features, collect_features, \
     load_fields_from_vocab, get_fields, OrderedIterator, \
     save_fields_to_vocab, build_dataset, build_vocab
 from onmt.inputters.dataset_base import DatasetBase, PAD_WORD, BOS_WORD, \
-    EOS_WORD, BOS_TAG, EOS_TAG
+    EOS_WORD, BOS_TAG, EOS_TAG, EOS_SENT
 from onmt.inputters.text_dataset import TextDataset
 from onmt.inputters.image_dataset import ImageDataset
 from onmt.inputters.audio_dataset import AudioDataset

@@ -141,8 +141,13 @@ class ReportMgr(ReportMgrBase):
         See base class method `ReportMgrBase.report_step`.
         """
         if train_stats is not None:
-            self.log('Train perplexity: %g' % train_stats.ppl())
-            self.log('Train accuracy: %g' % train_stats.accuracy())
+            self.log('Train Perplexity: %.2f' % train_stats.ppl())
+            self.log('Train Accuracy: %.2f' % train_stats.accuracy())
+            for n in ['1', '2', 'l']:
+                self.log('Train ROUGE-%s-R: %.2f, ROUGE-%s-P: %.2f, ROUGE-%s-F: %.2f' %
+                         (n.upper(), train_stats.rouge_n_r_score(n),
+                          n.upper(), train_stats.rouge_n_p_score(n),
+                          n.upper(), train_stats.rouge_n_f_score(n)))
 
             self.maybe_log_tensorboard(train_stats,
                                        "train",
@@ -150,8 +155,13 @@ class ReportMgr(ReportMgrBase):
                                        step)
 
         if valid_stats is not None:
-            self.log('Validation perplexity: %g' % valid_stats.ppl())
-            self.log('Validation accuracy: %g' % valid_stats.accuracy())
+            self.log('Validation Perplexity: %.2f' % valid_stats.ppl())
+            self.log('Validation Accuracy: %.2f' % valid_stats.accuracy())
+            for n in ['1', '2', 'l']:
+                self.log('Validation ROUGE-%s-R: %.2f, ROUGE-%s-P: %.2f, ROUGE-%s-F: %.2f' %
+                         (n.upper(), valid_stats.rouge_n_r_score(n),
+                          n.upper(), valid_stats.rouge_n_p_score(n),
+                          n.upper(), valid_stats.rouge_n_f_score(n)))
 
             self.maybe_log_tensorboard(valid_stats,
                                        "valid",
