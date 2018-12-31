@@ -29,7 +29,6 @@ def build_loss_compute(model, tgt_field, opt, train=True):
     padding_idx = tgt_field.vocab.stoi[tgt_field.pad_token]
     unk_idx = tgt_field.vocab.stoi[tgt_field.unk_token]
     end_token_idx = tgt_field.vocab.stoi[tgt_field.eos_token]
-
     if opt.copy_attn:
         if opt.with_tag:
             bos_tag_idx = tgt_field.vocab.stoi[inputters.BOS_TAG]

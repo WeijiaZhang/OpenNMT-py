@@ -25,10 +25,10 @@ function train_cnndm_no_tag() {
                 -encoder_type brnn \
                 -max_grad_norm 2 \
                 -dropout 0. \
-                -batch_size 16 \
-                -valid_batch_size 16 \
+                -batch_size 4 \
+                -valid_batch_size 4 \
                 -train_steps 200000 \
-                -valid_steps 10000 \
+                -valid_steps 200 \
                 -save_checkpoint_steps 10000 \
                 -keep_checkpoint 20 \
                 -optim adagrad \
